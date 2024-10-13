@@ -1,5 +1,5 @@
 [project]
-name = "controlflow"
+name = "agentgo"
 dynamic = ["version"]
 description = "A framework for building agentic LLM workflows"
 authors = [
@@ -41,7 +41,7 @@ keywords = [
 ]
 
 [project.urls]
-Code = "https://github.com/PrefectHQ/ControlFlow"
+Code = "https://github.com/synopkg/AgentGo"
 
 [project.optional-dependencies]
 tests = [
@@ -59,7 +59,7 @@ tests = [
     "pytest-xdist",
 ]
 dev = [
-    "controlflow[tests]",
+    "agentgo[tests]",
     "ipython",
     "pdbpp",
     "pre-commit",
