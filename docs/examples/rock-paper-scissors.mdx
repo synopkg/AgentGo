@@ -1,0 +1,79 @@
+---
+title: Rock, Paper, Scissors
+description: Play rock, paper, scissors against an AI... without letting it cheat.
+icon: hand-scissors
+# mode: wide
+---
+
+Creating a fair game of rock, paper, scissors against an AI opponent presents an interesting challenge: how do we prevent the AI from "cheating" by reading the player's choice before making its own? This example demonstrates how ControlFlow's features can be used to create a fair and engaging game while showcasing several key concepts of the framework.
+
+## Code
+
+The following code creates a function that plays rock, paper, scissors in a loop. Each round, it collects the user's move in a private context, then the AI's move in another private context, and finally reports the result and asks if the user wants to continue. This structure ensures that neither player can access the other's choice prematurely.
+
+```python
+import controlflow as cf
+
+@cf.flow
+def rock_paper_scissors():
+    """Play rock, paper, scissors against an AI."""
+    play_again = True
+
+    while play_again:
+        # Get the user's choice on a private thread
+        with cf.Flow():
+            user_choice = cf.run(
+                "Get the user's choice", 
+                result_type=["rock", "paper", "scissors"], 
+                interactive=True, 
+            )
+    
+        # Get the AI's choice on a private thread
+        with cf.Flow():
+            ai_choice = cf.run(
+                "Choose rock, paper, or scissors", 
+                result_type=["rock", "paper", "scissors"],
+            )
+
+        # Report the score and ask if the user wants to play again
+        play_again = cf.run(
+            "Report the score to the user and see if they want to play again.",
+            interactive=True,
+            context={"user_choice": user_choice, "ai_choice": ai_choice},
+            result_type=bool
+        )
+
+rock_paper_scissors()
+```
+
+Try running this example to see how ControlFlow manages the game flow and maintains fairness in this AI vs. human contest!
+
+## Key concepts
+
+This implementation showcases how ControlFlow can be used to create interactive, multi-step processes with controlled information flow. By using separate Flows for the player and AI choices, we ensure that the AI can't "cheat" by accessing the player's choice prematurely. The use of structured tasks, result types, and context passing allows for a clean and intuitive game logic, while the interactive features enable seamless player involvement.
+
+1. **[Flows](/concepts/flows)**: We use separate Flows to create isolated contexts for the player's and AI's choices. This ensures that neither can access the other's decision until both have been made.
+
+   ```python
+   with cf.Flow():
+       user_choice = cf.run(...)
+   ```
+2. **[Interactivity](/patterns/interactivity)**: The `interactive=True` parameter allows tasks to interact with the user, essential for getting the player's input.
+
+   ```python
+   user_choice = cf.run(..., interactive=True, ...)
+   ```
+
+3. **[Result types](/concepts/tasks/task-results)**: We use `result_type` to ensure that choices are valid and properly structured. This helps maintain the integrity of the game.
+
+   ```python
+   result_type=["rock", "paper", "scissors"]
+   ```
+
+4. **[Context passing](/concepts/tasks#context)**: The `context` parameter allows us to share information between tasks, crucial for determining the winner based on both players' choices.
+
+   ```python
+   context={"user_choice": user_choice, "ai_choice": ai_choice}
+   ```
+
+By leveraging these ControlFlow features, we can create a multi-step process that maintains fairness while allowing for engaging interaction between the AI and the player.

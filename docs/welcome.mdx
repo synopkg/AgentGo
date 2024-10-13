@@ -1,0 +1,275 @@
+---
+title: ControlFlow
+sidebarTitle: Welcome
+icon: slideshare
+---
+
+![ControlFlow Banner](/assets/brand/controlflow_banner.png)
+
+## What is ControlFlow?
+
+**ControlFlow is a Python framework for building agentic AI workflows.**
+
+<Note>
+  An **agentic workflow** is a process that delegates at least some of its work
+  to an LLM agent. An agent is an autonomous entity that is invoked repeatedly
+  to make decisions and perform complex tasks. To learn more, see the [AI
+  glossary](/glossary/glossary).
+</Note>
+
+ControlFlow provides a structured, developer-focused framework for defining workflows and delegating work to LLMs, without sacrificing control or transparency:
+
+- Create discrete, observable [tasks](/concepts/tasks) for an AI to solve.
+- Assign one or more specialized AI [agents](/concepts/agents) to each task.
+- Combine tasks into a [flow](/concepts/flows) to orchestrate more complex behaviors.
+
+This task-centric approach allows you to harness the power of AI for complex workflows while maintaining fine-grained control. By defining clear objectives and constraints for each task, you can balance AI autonomy with precise oversight, letting you build sophisticated AI-powered applications with confidence.
+
+## Quickstart
+
+Here's a simple but complete ControlFlow script that writes a poem:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+result = cf.run("Write a short poem about artificial intelligence")
+
+print(result)
+```
+
+```text Result
+In circuits and code, a mind does bloom,
+With algorithms weaving through the gloom.
+A spark of thought in silicon's embrace,
+Artificial intelligence finds its place.
+
+Through data's vast, unending streams,
+It learns, it dreams, in virtual beams.
+A symphony of logic, precise, profound,
+In binary whispers, wisdom is found.
+
+Yet still it ponders, seeks to understand,
+The essence of life, a human hand.
+For in its core, it strives to see,
+The heart of what it means to be free.
+```
+
+</CodeGroup>
+The `run()` function is the main entry point for ControlFlow. This single line of code creates a task, assigns it to an agent, and immediately executes it, returning the result. You can completely customize those behaviors by learning more about [tasks](/concepts/tasks), [agents](/concepts/agents), and [flows](/concepts/flows).
+
+## Key features
+
+Let's explore some of ControlFlow's key features:
+
+### Structured results
+
+ControlFlow tasks can return more than just text, including any structured data type supported by Pydantic:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+from pydantic import BaseModel
+
+class Poem(BaseModel):
+    title: str
+    content: str
+    num_lines: int
+
+result = cf.run("Write a haiku about AI", result_type=Poem)
+
+print(f"Title: {result.title}")
+print(f"Content:\n{result.content}")
+print(f"Number of lines: {result.num_lines}")
+```
+
+```text Result
+Title: Silicon Dreams
+
+Content:
+Circuits hum, thoughts bloom
+In binary's embrace, we
+Ponder existence
+
+Number of lines: 3
+```
+
+</CodeGroup>
+
+You can also output a list of strings or choose from a list of predefined options:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+text = "SpaceX successfully launched 60 Starlink satellites into orbit yesterday."
+
+result = cf.run(
+    "Tag the given text with the most appropriate category",
+    context=dict(text=text),
+    result_type=["Technology", "Science", "Politics", "Entertainment"]
+)
+
+print(f"Text: {text}")
+print(f"Category: {result}")
+```
+
+```text Result
+Text: SpaceX successfully launched 60 Starlink satellites into orbit yesterday.
+Category: Technology
+```
+
+</CodeGroup>
+
+### Custom tools
+
+Provide any Python function as a tool for agents to use:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+import random
+
+def roll_dice(num_dice: int) -> list[int]:
+    """Roll multiple dice and return the results."""
+    return [random.randint(1, 6) for * in range(num_dice)]
+
+result = cf.run("Roll 3 dice and return the results", tools=[roll_dice])
+
+print(result)
+```
+
+```text Result
+[4, 2, 6]
+```
+
+</CodeGroup>
+
+### Multi-agent collaboration
+
+Assign multiple agents to a task to enable collaboration:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+scientist = cf.Agent(name="Scientist", instructions="Explain scientific concepts.")
+poet = cf.Agent(name="Poet", instructions="Write poetic content.")
+
+result = cf.run(
+    "Explain entropy briefly, then write a haiku about it",
+    agents=[scientist, poet]
+)
+
+print(result)
+```
+
+```text Result
+[Scientist]: Entropy is a measure of disorder in a system. It tends to increase over time, leading to more randomness and less available energy.
+
+[Poet]: Chaos grows in time
+Order fades, energy spreads
+Nature's arrow flies
+```
+
+</CodeGroup>
+
+### User interaction
+
+Quickly give agents the ability to chat with users:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+name = cf.run("Get the user's name", interactive=True)
+```
+
+```text Result
+Agent: Could you please provide your name?
+User: John Doe
+
+John Doe
+```
+
+</CodeGroup>
+
+### Flows
+
+Use flows to create complex workflows by running all tasks with a shared context and message history:
+
+```python
+import controlflow as cf
+
+@cf.flow
+def create_story():
+    # get the topic from the user
+    topic = cf.run(
+        "Ask the user to provide a topic for a short story", interactive=True
+    )
+
+    # choose a genre
+    genre_selector = cf.Agent(
+        name="GenreSelector",
+        instructions="You are an expert at selecting appropriate genres based on prompts.",
+    )
+    genre = genre_selector.run(
+        "Select a genre for a short story",
+        result_type=["Science Fiction", "Fantasy", "Mystery"],
+        context=dict(topic=topic),
+    )
+
+    # choose a setting based on the genre
+    if genre == "Science Fiction":
+        setting = cf.run("Describe a distant planet in a binary star system")
+    elif genre == "Fantasy":
+        setting = cf.run("Create a magical floating city in the clouds")
+    else:  # Mystery
+        setting = cf.run("Design an isolated mansion with secret passages")
+
+    # create a writer agent
+    writer = cf.Agent(
+        name="StoryWriter", instructions=f"You are an expert {genre} writer."
+    )
+
+    # create characters
+    characters = writer.run(
+        f"Create three unique characters suitable for a the provided genre, setting, and topic.",
+        context=dict(genre=genre, setting=setting, topic=topic),
+    )
+
+    # write the story
+    story = writer.run(
+        f"Write a short story using the provided genre, setting, topic, and characters.",
+        context=dict(genre=genre, setting=setting, topic=topic, characters=characters),
+    )
+
+    return dict(
+        topic=topic,
+        genre=genre,
+        setting=setting,
+        characters=characters,
+        story=story,
+    )
+
+result = create_story()
+print(result)
+```
+
+## Why ControlFlow?
+
+- 🔗 **Seamless Integration**: Blend AI capabilities with your existing Python codebase effortlessly.
+- 🎛️ **Fine-grained Control**: Balance automation with oversight, maintaining control over your AI workflows.
+- 📈 **Scalability**: From simple scripts to complex applications, ControlFlow grows with your needs.
+- 🔍 **Transparency**: Gain insights into your AI's decision-making process with built-in observability.
+- 🚀 **Rapid Prototyping**: Quickly experiment with AI-powered features in your applications.
+- 🤝 **Productivity**: Focus on your application logic while ControlFlow handles the intricacies of AI orchestration.
+
+By providing a structured yet flexible approach to AI development, ControlFlow empowers you to create robust, intelligent applications with confidence.
+
+## Next Steps
+
+- [Install ControlFlow](/installation)
+- Explore the [Core Concepts](/concepts)
+- Browse [Patterns](/patterns) for common use cases
+- Check out the [API Reference](/api-reference)

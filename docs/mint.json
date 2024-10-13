@@ -1,0 +1,163 @@
+{
+    "$schema": "https://mintlify.com/schema.json",
+    "anchors": [
+        {
+            "icon": "github",
+            "name": "Code",
+            "url": "https://github.com/PrefectHQ/ControlFlow"
+        },
+        {
+            "icon": "slack",
+            "name": "Community",
+            "url": "https://prefect.io/slack?utm_source=controlflow&utm_medium=docs"
+        }
+    ],
+    "colors": {
+        "anchors": {
+            "from": "#2D6DF6",
+            "to": "#E44BF4"
+        },
+        "dark": "#2D6DF6",
+        "light": "#E44BF4",
+        "primary": "#2D6DF6"
+    },
+    "favicon": "/assets/brand/controlflow_logo.svg",
+    "footerSocials": {
+        "github": "https://github.com/PrefectHQ/ControlFlow",
+        "slack": "https://prefect.io/slack?utm_source=controlflow&utm_medium=docs"
+    },
+    "logo": {
+        "dark": "/assets/brand/controlflow_logo_pink_black_bg.svg",
+        "light": "/assets/brand/controlflow_logo.svg"
+    },
+    "name": "ControlFlow",
+    "navigation": [
+        {
+            "group": "Get Started",
+            "pages": [
+                "welcome",
+                "installation",
+                "quickstart"
+            ]
+        },
+        {
+            "group": "Core Concepts",
+            "pages": [
+                "concepts/concepts",
+                "concepts/tasks",
+                "concepts/agents",
+                "concepts/flows"
+            ]
+        },
+        {
+            "group": "Using ControlFlow",
+            "pages": [
+                "patterns/running-tasks",
+                "patterns/task-results",
+                "patterns/tools",
+                "patterns/interactivity",
+                "patterns/dependencies",
+                "patterns/memory",
+                "patterns/instructions",
+                "patterns/planning",
+                "patterns/history"
+            ]
+        },
+        {
+            "group": "Configuration",
+            "pages": [
+                "guides/settings",
+                "guides/configure-llms",
+                "guides/default-agent",
+                "guides/default-memory"
+            ]
+        },
+        {
+            "group": "ControlFlow Features",
+            "pages": [
+                "examples/features/dependent-tasks",
+                "examples/features/tools",
+                "examples/features/multi-llm",
+                "examples/features/private-flows",
+                "examples/features/memory",
+                "examples/features/early-termination"
+            ]
+        },
+        {
+            "group": "Core LLM Operations",
+            "pages": [
+                "examples/sentiment-classifier",
+                "examples/headline-categorization",
+                "examples/named-entity-recognition",
+                "examples/summarization",
+                "examples/standardize-addresses",
+                "examples/generate-people",
+                "examples/translation",
+                "examples/anonymization",
+                "examples/code-explanation"
+            ]
+        },
+        {
+            "group": "Agentic Flows",
+            "pages": [
+                "examples/language-tutor",
+                "examples/rock-paper-scissors",
+                "examples/seinfeld-conversation",
+                "examples/call-routing",
+                "examples/agent-engineer"
+            ]
+        },
+        {
+            "group": "Overview",
+            "pages": [
+                "glossary/glossary"
+            ]
+        },
+        {
+            "group": "LLM Glossary",
+            "pages": [
+                "glossary/llm",
+                "glossary/prompt-engineering",
+                "glossary/agents",
+                "glossary/agentic-workflows",
+                "glossary/flow-engineering",
+                "glossary/fine-tuning"
+            ]
+        },
+        {
+            "group": "ControlFlow Glossary",
+            "pages": [
+                "glossary/cf-task",
+                "glossary/cf-agent",
+                "glossary/cf-flow",
+                "glossary/tools",
+                "glossary/dependencies"
+            ]
+        },
+        {
+            "group": "Orchestration Glossary",
+            "pages": [
+                "glossary/task-orchestration",
+                "glossary/flow-orchestration",
+                "glossary/workflow"
+            ]
+        }
+    ],
+    "search": {
+        "prompt": "Ask Marvin..."
+    },
+    "tabs": [
+        {
+            "name": "Examples",
+            "url": "examples"
+        },
+        {
+            "name": "AI Glossary",
+            "url": "glossary"
+        }
+    ],
+    "topbarCtaButton": {
+        "type": "github",
+        "url": "https://github.com/PrefectHQ/ControlFlow"
+    }
+}

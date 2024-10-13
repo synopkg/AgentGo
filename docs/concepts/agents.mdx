@@ -1,0 +1,254 @@
+---
+title: Agents
+description: The intelligent workers in your AI workflows.
+icon: robot
+---
+
+import { VersionBadge } from '/snippets/version-badge.mdx'
+
+Agents are the intelligent, autonomous entities that power your AI workflows in ControlFlow. They represent AI models capable of understanding instructions, making decisions, and completing tasks.
+
+```python
+import controlflow as cf
+
+agent = cf.Agent("Marvin")
+```
+## What are agents?
+Agents in ControlFlow are configurable AI entities, each with its own identity, capabilities, and even personality. They act as the "workers" in your AI workflows, responsible for executing tasks and making decisions based on their assigned objectives and available tools.
+
+You can think of each agent as a portable LLM configuration. When you assign one or more agents to a task, they will collaborate to complete the task according to the instructions and tools you provide.
+
+
+## Creating agents
+
+To create an agent, use the `Agent` class.
+
+```python
+import controlflow as cf
+
+agent = cf.Agent(name="Marvin")
+```
+
+A more complex agent can be created by providing additional configuration. This agent shows almost every possible configuration option:
+
+```python
+import controlflow as cf
+
+agent = cf.Agent(
+    name="Data Analyst",
+    description="An AI agent specialized in data analysis",
+    instructions=(
+        "Perform data analysis tasks efficiently and accurately. "
+        "Browse the web for data and use Python to analyze it."
+    ),
+    tools=[cf.tools.web.get_url, cf.tools.code.python],
+    model="openai/gpt-4o",
+    interactive=True,
+)
+```
+
+## Agent properties
+
+### Name
+
+An agent's name is an identifier that is visible to other agents in the workflow. It is used to distinguish between agents and for logging and debugging purposes. If possible, keep agent names unique within a flow to avoid confusion. While agents do have deterministic IDs that can be used to disambiguate two agents with the same name, they will often use names when interacting with each other.
+
+### Description
+
+A description is a brief summary of the agent's role or specialization. This information is visible to other agents, and helps them understand the agent's capabilities and expertise.
+
+### Instructions
+
+Instructions are specific instructions or guidelines for the agent to follow during task execution. These instructions are private and not shared with other agents.
+
+### Tools
+
+Tools are Python functions that the agent can call to perform specific actions or computations. They are defined as a list of functions when creating an agent, and can be used to enhance the agent's capabilities. The agent will have access to these tools in every task they are assigned to. If a task defines additional tools, the agent will have access to those as well.
+
+### Model
+
+Each agent has a model, which is the LLM that powers the agent responses. This allows you to choose the most suitable model for your needs, based on factors such as performance, latency, and cost.
+
+ControlFlow supports any LangChain LLM that supports chat and function calling. For more details on how to configure models, see the [LLMs guide](/guides/configure-llms).
+
+```python
+import controlflow as cf
+
+
+agent1 = cf.Agent(model="openai/gpt-4o")
+agent2 = cf.Agent(model="anthropic/claude-3-5-sonnet-20240620")
+```
+
+### LLM rules
+<VersionBadge version="0.11.0" />
+
+Each LLM provider may have different requirements for how messages are formatted or presented. For example, OpenAI permits system messages to be interspersed between user messages, but Anthropic requires them to be at the beginning of the conversation. ControlFlow uses provider-specific rules to properly compile messages for each agent's API. 
+
+For common providers like OpenAI and Anthropic, LLM rules can be automatically inferred from the agent's model. However, you can use a custom `LLMRules` object to override these rules or provide rules for non-standard providers.
+
+Here is an example of how to tell the agent to use the Anthropic compilation rules with a custom model that can't be automatically inferred:
+
+```python
+import controlflow as cf
+
+# note: this is just an example
+llm_model = CustomAnthropicModel()
+
+agent = cf.Agent(
+    model=model,
+    llm_rules=cf.llm.rules.AnthropicRules(model=model)
+)
+```
+
+### Interactivity
+
+By default, agents have no way to communicate with users. If you want to chat with an agent, set `interactive=True`. By default, this will let the agent communicate with users on the command line.
+
+To learn more, see the [Interactivity guide](/patterns/interactivity).
+
+## Assigning agents to tasks
+
+Agents must be assigned to tasks in order to work on them. You can assign agents by passing them to the `agents` parameter when creating a task. Each task requires at least one assigned agent, and will use a default agent if none are provided. Agents can be assigned to multiple tasks, and tasks can have multiple agents. 
+
+
+### Tasks with no agents
+
+If you do not assign any agents to a task, it will determine its agents at runtime according to the following rules:
+
+1. If the task has a parent, it will use the parent's agents.
+2. If the task's flow has a default agent, it will use that agent.
+3. It will use the global default agent (`controlflow.defaults.agent`).
+
+To see the agents assigned to a task, use its `get_agents()` method. This will return a list of all the agents assigned to the task, including any inherited from its environment.
+
+### Tasks with one agent
+
+To assign a single agent to a task, pass a  agent to the `agents` parameter:
+
+```python Providing agents to a task
+import controlflow as cf
+
+poet = cf.Agent(name="Poet")
+
+poem = cf.run("Write a short poem about AI", agents=[poet])
+```
+
+Alternatively, you can use the agent's own `run` method to create and run a task in one step:
+
+```python Calling Agent.run()
+import controlflow as cf
+
+poet = cf.Agent(name="Poet")
+
+poem = poet.run("Write a short poem about AI")
+```
+
+These two approaches are functionally equivalent.
+
+
+### Tasks with multiple agents
+
+Assign multiple agents to a task by passing them to the task's `agents` parameter as a list.
+
+Here, we create two agents and assign them to a task that has them debate each other.
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+optimist = cf.Agent(
+    name="Optimist",
+    instructions="Always find the best in every situation.",
+)
+
+pessimist = cf.Agent(
+    name="Pessimist",
+    instructions="Always find the worst in every situation.",
+)
+
+cf.run(
+    "Debate world peace",
+    agents=[optimist, pessimist],
+    instructions=(
+        "Mark the task successful once both agents have "
+        "found something to agree on."
+    )
+)
+```
+```text Result
+Optimist: I see where you're coming from, Pessimist. Human nature and the
+disparities among nations do present significant challenges to achieving world
+peace. However, it's important to focus on the positive aspects and the
+potential for improvement.
+
+Pessimist: While it's true that efforts towards peace can lead to some positive
+outcomes, the reality is that these efforts are often met with setbacks,
+failures, and unintended consequences. The end of apartheid and the fall of the
+Berlin Wall were monumental achievements, but they didn't come without immense
+struggle, loss, and suffering. Moreover, the aftermath of such events often
+leaves lingering issues that take decades to resolve, if they ever are.
+
+Optimist: For instance, while human nature has its flaws, it also has incredible
+capacity for compassion, cooperation, and progress. These positive traits have
+led to remarkable achievements in history, such as the end of apartheid, the
+fall of the Berlin Wall, and advancements in human rights.
+
+Pessimist: International cooperation through organizations like the United
+Nations is often hampered by bureaucracy, political agendas, and lack of
+enforcement power. Peace treaties can be fragile and easily broken, leading to
+renewed conflicts that sometimes are even worse than before.
+
+Optimist: Additionally, efforts like international cooperation through
+organizations such as the United Nations and various peace treaties show that
+despite differences, nations can come together for a common good. While world
+peace may be difficult to achieve, the journey towards it can foster greater
+understanding, reduce conflicts, and improve the quality of life for many
+people.
+
+Pessimist: So, while there might be some value in striving for peace, the harsh
+truth is that the road is fraught with difficulties that may never be fully
+overcome. In essence, the pursuit of world peace often feels like an endless,
+Sisyphean task.
+
+Optimist: Can we agree that, even though world peace is challenging, the efforts
+and progress made towards it are valuable and can lead to significant positive
+outcomes?
+
+Pessimist: I suppose we can reluctantly agree that efforts towards peace might
+lead to some temporary positive outcomes, but the overall picture remains bleak
+and discouraging.
+
+---
+
+Result: Both agents agreed that efforts towards world peace can lead to some
+temporary positive outcomes, despite the overall bleak and discouraging reality.
+````
+
+</CodeGroup>
+
+When tasks have multiple agents, it's important to understand how they collaborate (and to provide them with clear instructions to guide that behavior). To learn more, see the [collaboration](/patterns/collaboration) doc.
+
+#### Assigning completion agents
+
+By default, every agent assigned to a task will be given tools for marking the task as successful or failed. If you want to restrict completion tools to a specific agent or agents, you can do so by setting the task's `completion_agents`.
+
+<Warning>
+  Setting `completion_agents` will prevent other agents from marking the task as successful or failed. Make sure your completion agents are also assigned to the task!
+</Warning>
+
+```python Completion agents
+import controlflow as cf
+
+a1 = cf.Agent(name="A1")
+a2 = cf.Agent(name="A2")
+a3 = cf.Agent(name="A3")
+
+
+task = cf.Task(
+    ...,
+    # all three agents can work on the task
+    agents=[a1, a2, a3],
+    # only a1 and a2 can mark the task as successful
+    completion_agents=[a1, a2],
+)
+```

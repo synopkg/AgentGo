@@ -1,0 +1,150 @@
+---
+title: Dependencies
+description: Manage task dependencies and subtasks to create complex workflows.
+icon: sitemap
+---
+
+In complex workflows, tasks often need to be executed in a specific order. Some tasks may rely on the outputs of others, or there might be a logical sequence that must be followed to achieve the desired outcome. ControlFlow provides several mechanisms to define and manage these task relationships, ensuring that your workflow executes in the correct order and that data flows properly between tasks.
+
+ControlFlow offers two primary ways to establish relationships between tasks: sequential dependencies and subtask relationships. Each method has its own use cases and benefits, allowing you to structure your workflows in the most appropriate way for your specific needs.
+
+## Upstream dependencies
+
+Upstream dependencies are the most straightforward way to specify that one task must wait for another to complete before it can begin. This is done using the `depends_on` parameter when creating a task.
+
+```python
+import controlflow as cf
+
+@cf.flow
+def research_flow():
+    gather_sources = cf.Task("Gather research sources", result_type=list[str])
+    
+    analyze_sources = cf.Task(
+        "Analyze gathered sources",
+        result_type=dict,
+        depends_on=[gather_sources]  # explicit dependency
+    )
+    
+    return analyze_sources
+
+result = research_flow()
+print(result)
+```
+
+In this example, `analyze_sources` will not start until `gather_sources` has completed successfully.
+
+## Subtasks
+
+Subtasks create a hierarchical dependency structure. A parent task can not be completed until all of its subtasks have finished. This hierarchical structure enables you to create detailed, step-by-step workflows that an AI agent can follow, ensuring thorough and accurate task completion.
+
+### Imperative creation
+
+You can create subtasks imperatively by passing the parent task as an argument when creating a new task:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+parent_task = cf.Task("Create a greeting")
+
+t1 = cf.Task("Choose a greeting word", parent=parent_task)
+t2 = cf.Task("Add a friendly adjective", parent=parent_task, depends_on=[t1])
+t3 = cf.Task("Construct the final greeting", parent=parent_task, depends_on=[t2])
+
+result = parent_task.run()
+print(result)
+```
+
+```text t1 Result
+Hello
+```
+
+```text t2 Result
+Warm
+```
+
+```text t3 Result
+Hello, I wish you a warm welcome!
+```
+
+```text parent_task Result
+Hello, I wish you a warm welcome!
+```
+</CodeGroup>
+
+
+
+### Context managers
+
+Another way to create subtasks is by using a context manager. This approach allows you to dynamically generate and execute subtasks within the scope of a parent task.
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+with cf.Task("Create a greeting") as parent_task:
+    t1 = cf.Task("Choose a greeting word")
+    t2 = cf.Task("Add a friendly adjective", depends_on=[t1])
+    t3 = cf.Task("Construct the final greeting", depends_on=[t2])
+
+result = parent_task.run()
+print(result)
+```
+
+```text t1 Result
+Hello
+```
+
+```text t2 Result
+Warm
+```
+
+```text t3 Result
+Hello, I wish you a warm welcome!
+```
+
+```text parent_task Result
+Hello, I wish you a warm welcome!
+```
+</CodeGroup>
+
+
+## Automatic Execution of Dependencies
+
+A key feature of ControlFlow's dependency management is that you don't need to explicitly run dependent tasks. When you run a task, ControlFlow automatically executes all of its dependencies, including:
+
+- Tasks specified in the `depends_on` parameter
+- Subtasks (for parent tasks)
+
+This means that when you run a flow or task, you only need to run or return the final task(s) in the workflow DAG. ControlFlow will ensure that all necessary upstream tasks and subtasks are executed in the correct order.
+
+For example:
+
+```python
+import controlflow as cf
+
+@cf.flow
+def research_flow():
+    gather_sources = cf.Task("Gather research sources", result_type=list[str])
+    
+    analyze_sources = cf.Task(
+        "Analyze gathered sources",
+        result_type=dict,
+        depends_on=[gather_sources]
+    )
+    
+    write_report = cf.Task(
+        "Write research report",
+        result_type=str,
+        depends_on=[analyze_sources]
+    )
+    
+    # Only need to run the final task
+    return write_report.run()
+
+research_flow()
+```
+
+In this example, running `write_report` will automatically trigger the execution of `analyze_sources`, which in turn will trigger `gather_sources`. You don't need to explicitly run or return `gather_sources` or `analyze_sources`.
+
+To learn more, see [running tasks](/patterns/running-tasks).

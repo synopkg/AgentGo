@@ -1,0 +1,442 @@
+---
+title: Tasks
+description: The building blocks of AI workflows.
+icon: list-check
+---
+
+Tasks are the fundamental building blocks of AI workflows in ControlFlow. They represent discrete, well-defined objectives that need to be accomplished by one or more AI agents.
+
+```python
+import controlflow as cf
+
+task = cf.Task("Write the ControlFlow docs")
+```
+
+## What are tasks?
+
+LLMs excel when given clear, specific objectives that allow them to focus their knowledge and capabilities on a well-defined goal. A `Task` in ControlFlow is a structured way to define these objectives and guide the AI's behavior. Each task represents a "checkpoint" that requires the AI to meet an observable, verifiable goal. In this way, tasks serve as a bridge between the structured world of traditional software and the more fluid, adaptive world of AI.
+
+This task-centric approach allows you to leverage the full power of AI while maintaining precise oversight. Each task becomes a checkpoint where you can validate outputs, ensuring that the AI's work aligns with your application's requirements and constraints.
+
+## Creating tasks
+
+A task in ControlFlow typically consists of:
+
+- An objective: what needs to be accomplished
+- Expected output: what form the result should have, including any constraints or validation
+- Agents: the AI entities responsible for executing the task
+- Tools: any additional capabilities needed to complete the task
+
+
+There are two primary ways to create tasks in ControlFlow: using the `Task` class directly, or using the `@task` decorator.
+
+<Tip>
+In practice, you will often use the `cf.run` function to create and run a task in a single step. This is a common operation and accepts all the same arguments as creating a `Task` directly. See [Running Tasks](/concepts/tasks/running-tasks) for more information.
+</Tip>
+
+### Using the `Task` class
+
+The most straightforward way to create a task is by using the `Task` class:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+task = cf.Task(
+    objective="Write a poem about the provided topic",
+    instructions="Write four lines that rhyme",
+    context={"topic": "AI"}    
+)
+
+result = task.run()
+print(result)
+```
+
+```text Result
+In circuits deep and code profound,
+An AI's mind begins to sound.
+Electric thoughts and data streams,
+Crafting worlds and shaping dreams.
+```
+
+</CodeGroup>
+
+### Using the `@task` decorator
+
+Some users may prefer to use the `@task` decorator for creating tasks, especially for tasks that are frequently invoked with different context values. However, this approach is less common and less flexible than using the `Task` class directly.
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+@cf.task
+def write_poem(topic: str) -> str:
+    """Write four lines that rhyme"""
+    return f"The topic is {topic}"
+
+result = write_poem("AI")
+print(result)
+```
+
+```text Result
+In circuits and codes, it finds its might,
+A beacon of knowledge, shining bright.
+From data's depths, it learns and grows,
+AI, the future, as it softly glows.
+```
+
+</CodeGroup>
+
+The following task properties are inferred directly from the decorated function:
+
+| Task property | Inferred from |
+| -------- | ------------------- | 
+| `name` | The function's name | 
+| `objective` | The function's docstring and return value (if any) |
+| `result_type` | The function's return annotation | 
+| `context` | The function's arguments (keyed by argument name) and return value (keyed as "Additional context") | 
+
+Additional properties can be set by passing keyword arguments directly to the `@task` decorator.
+
+## Task properties
+
+When creating a task, you can configure various properties to define its behavior and requirements. Here are the key configuration options:
+
+### Objective
+
+The objective of a task is the main goal that the task is working towards. It is used to guide the task's execution and to help agents understand the task's purpose. 
+
+The `objective` is the only required task configuration, as it indicates the task's purpose and helps agents understand the task they are working on.
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+poem = cf.run(objective="Write a poem about AI")
+
+print(poem)
+```
+
+```text Result
+In circuits deep and code profound,
+An AI's mind begins to sound.
+Electric thoughts and data streams,
+Crafting worlds and shaping dreams.
+```
+</CodeGroup>
+
+<Tip>
+Objectives can be "meta", especially if you have an agent that is working on your workflow itself (e.g. monitoring progress, creating new tasks, etc.). Be creative!
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+cf.run("Write a poem... then fail this task.")
+```
+
+```text Result
+ValueError: Task 04561cda ("Write a poem... then fail this task.") 
+failed: Task instructed to be marked as failed despite 
+no technical error
+```
+</CodeGroup>
+</Tip>
+
+### Result type
+
+A task's result type indicates the type of value that the task will return. This is used to validate the task's result and to help agents understand the task's output.
+
+A variety of different result types are supported, including:
+- Builtin types: `str`, `int`, `bool`, `list`, `dict`, etc.
+- `None`: sometimes a task requires agents to take actions but not return any specific value. In this case, provide clear instructions to agents about what they should do before completing the task.
+- Builtin collections: `Tuple[int, str]`, `List[str]`, `Dict[str, int]`, etc.
+- Annotated types: `Annotated[str, "a 5 digit zip code"]`
+- Pydantic models
+- Lists of literal values: provide a list of values to require the agent to choose one of them as its result. For example,`["book", "movie", "album"]` would require the agent to choose one of the three values.
+
+The default result type is `str`.
+
+Pydantic model example:
+<CodeGroup>
+```python Code
+import controlflow as cf
+from pydantic import BaseModel
+
+class Name(BaseModel):
+    first: str
+    last: str
+
+name = cf.run("The input is 'John Doe'", result_type=Name)
+
+print(repr(name))
+```
+
+```text Result
+Name(first='John', last='Doe')
+```
+</CodeGroup>
+
+Classification example:
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+from pydantic import BaseModel
+
+media = cf.run(
+    "Star Wars: Return of the Jedi", 
+    result_type=["book", "movie", "album"]
+)
+
+print(media)
+```
+
+```text Result
+movie
+```
+</CodeGroup>
+
+For more information, see [Result Types](/concepts/tasks/task-results).
+
+### Result validator
+
+You can specify a custom validation function for the task's result using the task's `result_validator` parameter. This function will be called with the raw result and should return the validated result or raise an exception if the result is not valid.
+
+```python
+import controlflow as cf
+
+def validate_even(value: int) -> int:
+    if value % 2 != 0:
+        raise ValueError("Value must be even")
+    return value
+
+number = cf.run("Choose a number", result_validator=validate_even)
+
+print(number)
+```
+
+For more information, see [Result Validators](/concepts/tasks/task-results#result-validators).
+
+
+
+### Instructions
+
+The instructions of a task are a string that provides detailed instructions for the task. This information is visible to agents during execution, helping them understand the task they are working on. 
+
+<Tip>
+As a general rule, use the task's `objective` to describe what the task's result should be, and use the `instructions` to provide more detailed instructions on how to achieve the objective.
+</Tip>
+
+
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+poem = cf.run(
+    "Write a poem about AI", 
+    instructions="Write only two lines, and end the first line with `not evil`",
+)
+
+print(poem)
+```
+
+```text Result
+AI is simply not evil,
+It’s the dawn of the machine revival.
+```
+</CodeGroup>
+
+### Agents
+
+A list of agents that are assigned to work on the task. This can be `None` to infer agents from a parent task, the flow, or the global default (in order).
+
+### Completion agents
+
+By default, every agent assigned to a task is given tools for marking the task as successful or failed. If you would like to give those tools to a specific set of agents, you can do so by setting the `completion_agents` parameter. Note that if your completion agents are not also assigned to the task, they will not be able to mark the task as successful or failed!
+
+```python
+task = cf.Task(
+    objective="Write a poem about AI",
+    agents=['poem_writer', 'poem_reviewer'],
+    completion_agents=["poem_reviewer"],
+)
+```
+
+Note that this setting reflects the configuration of the `completion_tools` parameter.
+
+### Completion tools
+
+import { VersionBadge } from '/snippets/version-badge.mdx'
+
+<VersionBadge version="0.10" />
+
+In addition to specifying which agents are automatically given completion tools, you can control which completion tools are generated for a task using the `completion_tools` parameter. This allows you to specify whether you want to provide success and/or failure tools, or even provide custom completion tools.
+
+The `completion_tools` parameter accepts a list of strings, where each string represents a tool to be generated. The available options are:
+
+- `"SUCCEED"`: Generates a tool for marking the task as successful.
+- `"FAIL"`: Generates a tool for marking the task as failed.
+
+If `completion_tools` is not specified, both `"SUCCEED"` and `"FAIL"` tools will be generated by default.
+
+You can manually create completion tools and provide them to your agents by calling `task.get_success_tool()` and `task.get_fail_tool()`.
+
+<Warning>
+If you exclude `completion_tools`, agents may be unable to complete the task or become stuck in a failure state. Without caps on LLM turns or calls, this could lead to runaway LLM usage. Make sure to manually manage how agents complete tasks if you are using a custom set of completion tools.
+</Warning>
+
+Here are some examples:
+
+```
+# Generate both success and failure tools (default behavior, equivalent to `completion_tools=None`)
+task = cf.Task(
+    objective="Write a poem about AI",
+    completion_tools=["SUCCEED", "FAIL"],
+)
+
+# Only generate a success tool
+task = cf.Task(
+    objective="Write a poem about AI",
+    completion_tools=["SUCCEED"],
+)
+
+# Only generate a failure tool
+task = cf.Task(
+    objective="Write a poem about AI",
+    completion_tools=["FAIL"],
+)
+
+# Don't generate any completion tools
+task = cf.Task(
+    objective="Write a poem about AI",
+    completion_tools=[],
+)
+```
+
+By controlling which completion tools are generated, you can customize the task completion process to better suit your workflow needs. For example, you might want to prevent agents from marking a task as failed, or you might want to provide your own custom completion tools instead of using the default ones.
+
+### Name
+
+The name of a task is a string that identifies the task within the workflow. It is used primarily for logging and debugging purposes, though it is also shown to agents during execution to help identify the task they are working on.
+
+
+### Context
+
+The context of a task is a dictionary that provides additional information about the task. This information is visible to agents during execution, helping them understand the task they are working on. While you can also provide information to agents by interpolating it into their objective or instruction strings, the context dictionary is more convenient for most use cases.
+
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+is_spam = cf.run(
+    "Is this email spam?", 
+    result_type=bool, 
+    context=dict(email='You just won a million dollars!'),
+)
+
+print(is_spam)
+```
+
+```text Result
+True
+```
+</CodeGroup>
+
+
+### Tools
+
+The tools of a task are a list of tools that the task requires. This information is visible to agents during execution, helping them understand the task they are working on.
+<CodeGroup>
+```python Code
+import controlflow as cf
+import random
+
+
+def roll_dice(n_dice: int):
+    return [random.randint(1, 6) for _ in range(n_dice)]
+
+rolls = cf.run(
+    "Roll 3 dice",
+    result_type=list[int], 
+    tools=[roll_dice],
+)
+
+print(rolls)
+```
+
+```text Result
+[3, 1, 5]
+```
+</CodeGroup>
+
+### Parent
+
+Tasks can be configured with a parent task. Creating hierarchies of tasks can help agents understand the relationships between different tasks and to better understand the task they are working on. In general, running a parent task also attempts to complete its children; but running a child does not attempt to run its parent.
+
+### Depends on
+
+Tasks can be configured with a list of tasks that they depend on. This information is visible to agents during execution, helping them prioritize work. The orchestrator may also use this information to avoid running a task before its upstream dependencies are complete.
+
+## Runtime properties
+
+The following properties of a `Task` are set during task execution, and can be examined as part of your workflow's logic.
+
+### Status
+
+The status of a task reflects whether an agent has started working on it, and what the ultimate outcome of that work was. Tasks are always created with a `PENDING` status, progress to a `RUNNING` status whenever one of their assigned agents begins to work on it, and finally moves to one of a few completed statuses when the task is finished.
+
+Agents use tools to mark tasks as `SUCCESSFUL` or `FAILED`. Successful tasks will also have a `result` property, which contains the task's final output. This is a value that satisfies the task's objective and result type configuration. Failed tasks will have an error message as their result.
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+task = cf.Task("Write a poem about AI")
+task.run()
+
+print(task.status)
+```
+
+```text Result
+TaskStatus.SUCCESSFUL
+```
+</CodeGroup>
+
+In addition to checking the status explicitly, you can call a number of helper methods on the task:
+
+| Method | Description |
+|--------|-------------|
+| `is_pending()` | Returns `True` if the task is pending. |
+| `is_running()` | Returns `True` if the task is running. |
+| `is_successful()` | Returns `True` if the task is successful. |
+| `is_failed()` | Returns `True` if the task is failed. |
+| `is_skipped()` | Returns `True` if the task is skipped. |
+| `is_complete()` | Returns `True` if the task is complete (either successful, failed, or skipped) |
+| `is_incomplete()` | Returns `True` if the task is incomplete (either pending, running, or not started) |
+| `is_ready()` | Returns `True` if the task is ready to be worked on (i.e. all dependencies are complete but the task is incomplete) |
+
+### Result
+
+When a task is completed successfully, its `result` property will contain the task's final output. This is a value that satisfies the task's objective and result type configuration.
+
+If a task fails, its `result` property will contain an error message describing the failure.
+
+<CodeGroup>
+```python Code
+import controlflow as cf
+
+task = cf.Task("Write a poem about AI")
+task.run()
+
+print(task.result)
+```
+
+```text Result
+In circuits deep and code profound,
+An AI's mind begins to sound.
+Electric thoughts and data streams,
+Crafting worlds and shaping dreams.
+```
+</CodeGroup>
